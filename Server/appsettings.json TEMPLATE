@@ -1,0 +1,16 @@
+/// REMOVE THIS LINE AND REPLACE THE BELOW ENTRIES FROM THOSE IN THE AZURE PORTAL. THEN RENAME THE FILE TO appsettings.json
+
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Trace",
+      "System": "Information",
+      "Microsoft": "Information"
+    }
+  },
+  "AllowedHosts": "*",
+  "ResourceConnectionString": "REPLACE_WITH_CONNECTION_STRING",
+  "EndpointUrl":"REPLACE_WITH_ENDPOINT_URL",
+  "AdminUserId": "REPLACE_WITH_ADMIN_USER_ID",
+  "LanguageAPIKey": "REPLACE_WITH_API_KEY"
+}

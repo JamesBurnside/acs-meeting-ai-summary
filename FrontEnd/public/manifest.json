@@ -1,0 +1,8 @@
+{
+  "name": "Azure Communication AI Summarization Sample",
+  "short_name": "AzureCommunicationAISummarizationSample",
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#000000",
+  "background_color": "#ffffff"
+}

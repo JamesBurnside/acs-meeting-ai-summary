@@ -1,0 +1,12 @@
+{
+  "name": "acs-meeting-ai-summary",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "setup": "cd Server && npm install && cd ../FrontEnd && npm install && cd ..",
+    "start": "cd FrontEnd && npm run start && cd ..",
+    "build": "cd Server && npm run build && cd ../FrontEnd && npm run build && cd ..",
+    "package": "cd FrontEnd && npm run package && cd .."
+  }
+}
