@@ -2,30 +2,20 @@
 // Licensed under the MIT License.
 
 import { CommunicationUserIdentifier } from '@azure/communication-common';
-import { ParticipantRole } from '@azure/communication-calling';
-import { fromFlatCommunicationIdentifier, StartCallIdentifier } from '@azure/communication-react';
-import { MicrosoftTeamsUserIdentifier } from '@azure/communication-common';
 import { setLogLevel } from '@azure/logger';
 import { initializeIcons, Spinner } from '@fluentui/react';
-import { CallAdapterLocator } from '@azure/communication-react';
 import React, { useEffect, useState } from 'react';
 import {
   createGroupId,
-  fetchTokenResponse,
   getGroupIdFromUrl,
   getTeamsLinkFromUrl,
-  isLandscape,
-  isOnIphoneAndNotSafari,
-  navigateToHomePage,
   WEB_APP_TITLE
 } from './utils/AppUtils';
-import { createRoom, getRoomIdFromUrl, addUserToRoom } from './utils/AppUtils';
-import { useIsMobile } from './utils/useIsMobile';
 import { CallError } from './views/CallError';
 import { CallScreen } from './views/CallScreen';
 import { HomeScreen } from './views/HomeScreen';
-import { UnsupportedBrowserPage } from './views/UnsupportedBrowserPage';
-import { getMeetingIdFromUrl } from './utils/AppUtils';
+import { fetchTokenResponse } from './utils/credential';
+import { GroupCallLocator, TeamsMeetingLinkLocator } from '@azure/communication-calling';
 
 setLogLevel('error');
 
@@ -38,14 +28,12 @@ const App = (): JSX.Element => {
 
   // User credentials to join a call with - these are retrieved from the server
   const [token, setToken] = useState<string>();
-  const [userId, setUserId] = useState<CommunicationUserIdentifier | MicrosoftTeamsUserIdentifier>();
+  const [userId, setUserId] = useState<CommunicationUserIdentifier>();
   const [userCredentialFetchError, setUserCredentialFetchError] = useState<boolean>(false);
 
   // Call details to join a call - these are collected from the user on the home screen
-  const [callLocator, setCallLocator] = useState<CallAdapterLocator>();
-  const [targetCallees, setTargetCallees] = useState<StartCallIdentifier[]>([]);
+  const [callLocator, setCallLocator] = useState<GroupCallLocator | TeamsMeetingLinkLocator>();
   const [displayName, setDisplayName] = useState<string>('');
-  const [isTeamsCall, setIsTeamsCall] = useState<boolean>(false);
 
   // Get Azure Communications Service token from the server
   useEffect(() => {
@@ -61,75 +49,22 @@ const App = (): JSX.Element => {
     })();
   }, []);
 
-  const isMobileSession = useIsMobile();
-  const isLandscapeSession = isLandscape();
-
-  useEffect(() => {
-    if (isMobileSession && isLandscapeSession) {
-      console.log('ACS Sample: Mobile landscape view is experimental behavior');
-    }
-  }, [isMobileSession, isLandscapeSession]);
-
-  const supportedBrowser = !isOnIphoneAndNotSafari();
-  if (!supportedBrowser) {
-    return <UnsupportedBrowserPage />;
-  }
-
   switch (page) {
     case 'home': {
       document.title = `home - ${WEB_APP_TITLE}`;
       // Show a simplified join home screen if joining an existing call
-      const joiningExistingCall: boolean =
-        !!getGroupIdFromUrl() || !!getTeamsLinkFromUrl() || !!getMeetingIdFromUrl() || !!getRoomIdFromUrl();
+      const joiningExistingCall: boolean = !!getGroupIdFromUrl() || !!getTeamsLinkFromUrl()
       return (
         <HomeScreen
           joiningExistingCall={joiningExistingCall}
           startCallHandler={async (callDetails) => {
             setDisplayName(callDetails.displayName);
 
-            let callLocator: CallAdapterLocator | undefined =
+            let callLocator: GroupCallLocator | TeamsMeetingLinkLocator | undefined =
               callDetails.callLocator ||
-              getRoomIdFromUrl() ||
               getTeamsLinkFromUrl() ||
-              getMeetingIdFromUrl() ||
               getGroupIdFromUrl() ||
               createGroupId();
-
-            if (callDetails.option === 'Rooms') {
-              callLocator = getRoomIdFromUrl() || callDetails.callLocator;
-            }
-
-            if (callDetails.option === 'TeamsAdhoc') {
-              const outboundTeamsUsers = callDetails.outboundTeamsUsers?.map((user) => {
-                return fromFlatCommunicationIdentifier(user) as StartCallIdentifier;
-              });
-              callLocator = undefined;
-              setTargetCallees(outboundTeamsUsers ?? []);
-            }
-
-            // There is an API call involved with creating a room so lets only create one if we know we have to
-            if (callDetails.option === 'StartRooms') {
-              let roomId = '';
-              try {
-                roomId = await createRoom();
-              } catch (e) {
-                console.log(e);
-              }
-
-              callLocator = { roomId: roomId };
-            }
-
-            if (callLocator && 'roomId' in callLocator) {
-              if (userId && 'communicationUserId' in userId) {
-                await addUserToRoom(
-                  userId.communicationUserId,
-                  callLocator.roomId,
-                  callDetails.role as ParticipantRole
-                );
-              } else {
-                throw 'Invalid userId!';
-              }
-            }
 
             setCallLocator(callLocator);
 
@@ -138,13 +73,10 @@ const App = (): JSX.Element => {
               window.history.pushState(
                 {},
                 document.title,
-                window.location.origin + getJoinParams(callLocator) + getIsCTEParam(!!callDetails.teamsToken)
+                window.location.origin + getJoinParams(callLocator)
               );
             }
-            setIsTeamsCall(!!callDetails.teamsToken);
-            callDetails.teamsToken && setToken(callDetails.teamsToken);
-            callDetails.teamsId &&
-              setUserId(fromFlatCommunicationIdentifier(callDetails.teamsId) as MicrosoftTeamsUserIdentifier);
+
             setPage('call');
           }}
         />
@@ -164,7 +96,7 @@ const App = (): JSX.Element => {
         );
       }
 
-      if (!token || !userId || (!displayName && !isTeamsCall) || (!targetCallees && !callLocator)) {
+      if (!token || !userId || !displayName || !callLocator) {
         document.title = `credentials - ${WEB_APP_TITLE}`;
         return <Spinner label={'Getting user credentials from server'} ariaLive="assertive" labelPosition="top" />;
       }
@@ -174,8 +106,6 @@ const App = (): JSX.Element => {
           userId={userId}
           displayName={displayName}
           callLocator={callLocator}
-          targetCallees={targetCallees}
-          isTeamsIdentityCall={isTeamsCall}
         />
       );
     }
@@ -185,24 +115,16 @@ const App = (): JSX.Element => {
   }
 };
 
-const getIsCTEParam = (isCTE?: boolean): string => {
-  return isCTE ? '&isCTE=true' : '';
-};
-
-const getJoinParams = (locator: CallAdapterLocator): string => {
+const getJoinParams = (locator: GroupCallLocator | TeamsMeetingLinkLocator ): string => {
   if ('meetingLink' in locator) {
     return '?teamsLink=' + encodeURIComponent(locator.meetingLink);
-  }
-  if ('meetingId' in locator) {
-    return (
-      '?meetingId=' + encodeURIComponent(locator.meetingId) + (locator.passcode ? '&passcode=' + locator.passcode : '')
-    );
-  }
-  if ('roomId' in locator) {
-    return '?roomId=' + encodeURIComponent(locator.roomId);
   }
 
   return '?groupId=' + encodeURIComponent(locator.groupId);
 };
 
 export default App;
+
+const navigateToHomePage = (): void => {
+  window.location.href = window.location.href.split('?')[0];
+};

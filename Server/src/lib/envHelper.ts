@@ -13,19 +13,5 @@ export const getResourceConnectionString = (): string => {
   return resourceConnectionString;
 };
 
-export const getEndpoint = (): string => {
-  const uri = new URL(process.env['EndpointUrl'] || appSettings.EndpointUrl);
-  return `${uri.protocol}//${uri.host}`;
-};
-
-export const getAdminUserId = (): string => {
-  const adminUserId = process.env['AdminUserId'] || appSettings.AdminUserId;
-
-  if (!adminUserId) {
-    throw new Error('No ACS Admin UserId provided');
-  }
-
-  return adminUserId;
-};
-
 export const getLanguageAPIKey = (): string => process.env['LANGUAGE_API_KEY'] || appSettings.LanguageAPIKey;
+export const getLanguageAPIURL = (): string => process.env['LANGUAGE_API_URL'] || appSettings.LanguageAPIURL;

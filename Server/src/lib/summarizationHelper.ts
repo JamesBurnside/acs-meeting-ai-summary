@@ -1,11 +1,9 @@
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
 
-// import { AnalyzeBatchAction, AzureKeyCredential, TextAnalysisClient } from '@azure/ai-language-text';
-import { getLanguageAPIKey } from './envHelper';
+import { getLanguageAPIKey, getLanguageAPIURL } from './envHelper';
 
-const API_URL =
-  'https://ui-library-ai-language-services-test-resource.cognitiveservices.azure.com/language/analyze-conversations/jobs?api-version=2023-11-15-preview';
+const API_URL = getLanguageAPIURL();
 
 const apiHeaders = (): HeadersInit => ({
   'Content-Type': 'application/json',
@@ -48,24 +46,11 @@ export type SummarizeResult = {
   }[];
 };
 
-// const testInputData = [...(testTranscript as unknown as Set<CaptionsInfo>)].map((caption) => ({
-//   author: caption.speaker.displayName,
-//   text: caption.captionText
-// }));
-
-const testJobResponse = {
-  status: 'Succeeded',
-  tasks: RestReponse.tasks.items
-};
-
-export async function SummarizeConversation(input: ConversationSummaryInput | 'testdata'): Promise<SummarizeResult> {
-  const USE_TEST_DATA = input === 'testdata';
-  const requestResponse = USE_TEST_DATA
-    ? { jobUrl: 'n/a' }
-    : await requestConversationSummary(input as unknown as ConversationSummaryInput);
+export async function SummarizeConversation(input: ConversationSummaryInput): Promise<SummarizeResult> {
+  const requestResponse = await requestConversationSummary(input as unknown as ConversationSummaryInput);
   console.log('Request response:', requestResponse);
 
-  const jobResult = USE_TEST_DATA ? testJobResponse : await pollJobStatus(requestResponse.jobUrl);
+  const jobResult = await pollJobStatus(requestResponse.jobUrl);
   console.log('Job result:', jobResult);
 
   if (jobResult.status === 'Failed') {
@@ -205,66 +190,3 @@ const fetchJobResult = async (jobUrl: string): Promise<JobRestResponse> => {
     };
   }
 };
-
-// const OLD_FUNCTIONS = async (input: ConversationSummaryInput): Promise<void> => {
-//   const transcript = input.map((caption) => `${caption.author}: ${caption.text}`);
-//   console.log('Transcript:', transcript);
-
-//   const client = new TextAnalysisClient(
-//     'https://ui-library-ai-language-services-test-resource.cognitiveservices.azure.com',
-//     new AzureKeyCredential(getLanguageAPIKey())
-//   );
-
-//   const documentLimit = 25;
-//   const charLimit = 1000;
-//   const textLimit = charLimit * 5000;
-
-//   const documents: string[] = [];
-//   let currentDocument = '';
-//   let currentDocumentLength = 0;
-//   for (const sentence of transcript) {
-//     if (currentDocumentLength + sentence.length + 2 > textLimit || documents.length >= documentLimit) {
-//       documents.push(currentDocument);
-//       currentDocument = '';
-//       currentDocumentLength = 0;
-//     }
-//     currentDocument += sentence + '. ';
-//     currentDocumentLength += currentDocument.length;
-//   }
-//   documents.push(currentDocument);
-//   const documentsLimited = documents.slice(0, documentLimit);
-//   console.log('Documents:', documentsLimited);
-
-//   const sentimentResults = await client.analyze('SentimentAnalysis', transcript);
-//   console.log('Sentiment analysis results:', sentimentResults);
-//   const keyPhraseExtractionResults = await client.analyze('KeyPhraseExtraction', transcript, 'en');
-//   console.log('Key phrase extraction results:', keyPhraseExtractionResults);
-
-//   const actions: AnalyzeBatchAction[] = [
-//     {
-//       kind: 'ExtractiveSummarization',
-//       maxSentenceCount: 2
-//     }
-//   ];
-//   const poller = await client.beginAnalyzeBatch(actions, documentsLimited, 'en');
-//   const results = await poller.pollUntilDone();
-
-//   for await (const actionResult of results) {
-//     if (actionResult.kind !== 'ExtractiveSummarization') {
-//       throw new Error(`Expected extractive summarization results but got: ${actionResult.kind}`);
-//     }
-//     if (actionResult.error) {
-//       const { code, message } = actionResult.error;
-//       throw new Error(`Unexpected error (${code}): ${message}`);
-//     }
-//     for (const result of actionResult.results) {
-//       console.log(`- Document ${result.id}`);
-//       if (result.error) {
-//         const { code, message } = result.error;
-//         throw new Error(`Unexpected error (${code}): ${message}`);
-//       }
-//       console.log('Summary:');
-//       console.log(result.sentences.map((sentence) => sentence.text).join('\n'));
-//     }
-//   }
-// };

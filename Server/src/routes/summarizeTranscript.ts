@@ -6,14 +6,18 @@ import { ConversationSummaryInput, SummarizeConversation } from '../lib/summariz
 
 const router = express.Router();
 interface SummarizeTranscriptRequest {
-  useTestData: boolean;
   transcript: ConversationSummaryInput;
 }
 
 router.post('/', async function (req, res, next) {
-  const { transcript, useTestData }: SummarizeTranscriptRequest = req.body;
-  const summarized = await SummarizeConversation(useTestData ? 'testdata' : transcript);
-  res.send(summarized);
+  try {
+    const { transcript }: SummarizeTranscriptRequest = req.body;
+    const summarized = await SummarizeConversation(transcript);
+    res.send(summarized);
+  } catch (error) {
+    console.error('Error in summarizeTranscript:', error);
+    res.status(500).send('Error. Failed to summarize transcript');
+  }
 });
 
 export default router;

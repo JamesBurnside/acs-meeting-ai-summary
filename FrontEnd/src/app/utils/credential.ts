@@ -3,9 +3,25 @@
 
 import { AzureCommunicationTokenCredential, CommunicationTokenRefreshOptions } from '@azure/communication-common';
 import { AbortSignalLike } from '@azure/abort-controller';
+import { CommunicationUserToken } from '@azure/communication-identity';
 
 const postRefreshTokenParameters = {
   method: 'POST'
+};
+
+/**
+ * Get ACS user token from the Contoso server.
+ */
+export const fetchTokenResponse = async (): Promise<CommunicationUserToken> => {
+  const response = await fetch('/api/token?scope=voip');
+  if (response.ok) {
+    const responseAsJson: CommunicationUserToken = await response.json();
+    const token = responseAsJson.token;
+    if (token) {
+      return responseAsJson;
+    }
+  }
+  throw new Error('Invalid token response');
 };
 
 /**
@@ -22,9 +38,10 @@ export const createAutoRefreshingCredential = (userId: string, token: string): A
 
 const refreshTokenAsync = (userIdentity: string): ((abortSignal?: AbortSignalLike) => Promise<string>) => {
   return async (): Promise<string> => {
-    const response = await fetch(`/refreshToken/${userIdentity}`, postRefreshTokenParameters);
+    const response = await fetch(`/api/refreshToken/${userIdentity}`, postRefreshTokenParameters);
     if (response.ok) {
-      return (await response.json()).token;
+      const communicationUserToken: CommunicationUserToken = await response.json();
+      return communicationUserToken.token;
     } else {
       throw new Error('could not refresh token');
     }
