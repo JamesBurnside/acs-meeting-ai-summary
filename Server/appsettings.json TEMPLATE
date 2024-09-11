@@ -10,8 +10,6 @@
   },
   "AllowedHosts": "*",
   "ResourceConnectionString": "REPLACE_WITH_CONNECTION_STRING",
-  "EndpointUrl":"REPLACE_WITH_ENDPOINT_URL",
-  "AdminUserId": "REPLACE_WITH_ADMIN_USER_ID",
   "LanguageAPIURL": "REPLACE_WITH_API_URL",
   "LanguageAPIKey": "REPLACE_WITH_API_KEY"
 }
